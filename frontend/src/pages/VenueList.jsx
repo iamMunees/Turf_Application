@@ -8,6 +8,11 @@ import {
   getVenues,
 } from '../lib/arenaxApi';
 
+const getNormalizedFilterOptions = (payload) => ({
+  cities: Array.isArray(payload?.cities) ? payload.cities : [],
+  sports: Array.isArray(payload?.sports) ? payload.sports : [],
+});
+
 const VenueList = () => {
   const [session, setSession] = useState(null);
   const [filterOptions, setFilterOptions] = useState({ cities: [], sports: [] });
@@ -26,12 +31,13 @@ const VenueList = () => {
           ensureArenaXSession(),
           getVenueFilters(),
         ]);
+        const normalizedFilters = getNormalizedFilterOptions(filtersPayload);
 
         setSession(arenaSession);
-        setFilterOptions(filtersPayload);
+        setFilterOptions(normalizedFilters);
 
-        const firstCity = filtersPayload.cities[0]?.city || '';
-        const firstArea = filtersPayload.cities[0]?.areas[0] || '';
+        const firstCity = normalizedFilters.cities[0]?.city || '';
+        const firstArea = normalizedFilters.cities[0]?.areas[0] || '';
 
         setFilters({
           city: firstCity,
@@ -69,7 +75,9 @@ const VenueList = () => {
     loadVenues();
   }, [filters]);
 
-  const selectedCity = filterOptions.cities.find((city) => city.city === filters.city);
+  const cityOptions = Array.isArray(filterOptions.cities) ? filterOptions.cities : [];
+  const sportOptions = Array.isArray(filterOptions.sports) ? filterOptions.sports : [];
+  const selectedCity = cityOptions.find((city) => city.city === filters.city);
   const areaOptions = selectedCity?.areas || [];
 
   return (
@@ -97,7 +105,7 @@ const VenueList = () => {
               value={filters.city}
               onChange={(event) => {
                 const nextCity = event.target.value;
-                const nextArea = filterOptions.cities.find((city) => city.city === nextCity)?.areas[0] || '';
+                const nextArea = cityOptions.find((city) => city.city === nextCity)?.areas[0] || '';
 
                 setFilters((current) => ({
                   ...current,
@@ -107,7 +115,7 @@ const VenueList = () => {
               }}
               className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-white outline-none"
             >
-              {filterOptions.cities.map((city) => (
+              {cityOptions.map((city) => (
                 <option key={city.city} value={city.city}>
                   {city.city}
                 </option>
@@ -138,7 +146,7 @@ const VenueList = () => {
               className="w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-white outline-none"
             >
               <option value="">All sports</option>
-              {filterOptions.sports.map((sport) => (
+              {sportOptions.map((sport) => (
                 <option key={sport} value={sport}>
                   {sport}
                 </option>
