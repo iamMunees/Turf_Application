@@ -10,6 +10,7 @@ const Message = require('../models/Message');
 const Post = require('../models/Post');
 const User = require('../models/User');
 const { ensureGameSeedData } = require('./games.controller');
+const { getCloudinaryConfig, isDataUrl, uploadDataUrl } = require('../config/cloudinary');
 
 const SPORT_OPTIONS = ['Football', 'Cricket', 'Badminton', 'Tennis', 'Basketball', 'Volleyball', 'Pickleball'];
 
@@ -243,7 +244,30 @@ exports.updateCurrentUser = async (req, res) => {
     if (skillLevel) user.skillLevel = skillLevel;
     if (typeof playingPosition === 'string') user.playingPosition = playingPosition.trim();
     if (typeof bio === 'string') user.bio = bio.trim();
-    if (typeof avatarUrl === 'string') user.avatarUrl = avatarUrl.trim();
+    if (typeof avatarUrl === 'string') {
+      const trimmedAvatarUrl = avatarUrl.trim();
+
+      if (trimmedAvatarUrl) {
+        if (isDataUrl(trimmedAvatarUrl)) {
+          if (!getCloudinaryConfig()) {
+            return res.status(500).json({
+              success: false,
+              message: 'Cloudinary is not configured for avatar uploads.',
+            });
+          }
+
+          const upload = await uploadDataUrl(trimmedAvatarUrl, {
+            folder: 'lineup/avatars',
+            publicId: `user-${user._id}-${Date.now()}`,
+          });
+          user.avatarUrl = upload.url;
+        } else {
+          user.avatarUrl = trimmedAvatarUrl;
+        }
+      } else {
+        user.avatarUrl = '';
+      }
+    }
 
     await user.save();
 

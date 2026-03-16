@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import DashboardShell from '../../components/DashboardShell';
 import GameDetails from '../../components/games/GameDetails';
@@ -21,10 +21,10 @@ const GameDetailsPage = () => {
   const [followBusyId, setFollowBusyId] = useState('');
   const [pendingCommentId, setPendingCommentId] = useState('');
 
-  const loadGame = async (token) => {
+  const loadGame = useCallback(async (token) => {
     const response = await getGameDetails(gameId, token);
     setGame(response.data.game);
-  };
+  }, [gameId]);
 
   useEffect(() => {
     const load = async () => {
@@ -42,7 +42,7 @@ const GameDetailsPage = () => {
     };
 
     load();
-  }, [gameId]);
+  }, [loadGame]);
 
   const handleJoin = async () => {
     if (!session?.token || !game) {
@@ -172,3 +172,4 @@ const GameDetailsPage = () => {
 };
 
 export default GameDetailsPage;
+

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import DashboardShell from '../components/DashboardShell';
 import EditProfile from '../components/profile/EditProfile';
@@ -27,7 +27,7 @@ const ProfilePage = () => {
 
   const isOwnProfile = !userId || userId === session?.user?.id;
 
-  const loadProfile = async (token, sessionValue) => {
+  const loadProfile = useCallback(async (token, sessionValue) => {
     const response = userId ? await getUserProfile(userId, token) : await getCurrentUserProfile(token);
     setProfile(response.data.user);
 
@@ -42,7 +42,7 @@ const ProfilePage = () => {
       setSession(nextSession);
       setStoredSession(nextSession);
     }
-  };
+  }, [userId]);
 
   useEffect(() => {
     const load = async () => {
@@ -59,7 +59,7 @@ const ProfilePage = () => {
     };
 
     load();
-  }, [userId]);
+  }, [loadProfile]);
 
   const handleSave = async (payload) => {
     if (!session?.token) {
@@ -256,3 +256,4 @@ const ProfilePage = () => {
 };
 
 export default ProfilePage;
+
