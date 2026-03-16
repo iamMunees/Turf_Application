@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const DEFAULT_MONGO_URI = 'mongodb://127.0.0.1:27017/lineup';
 const UNSUPPORTED_QUERY_PARAMS = ['turf_Application'];
+let connectionPromise;
 
 const sanitizeMongoUri = (mongoUri) => {
   if (!mongoUri) {
@@ -35,14 +36,32 @@ const sanitizeMongoUri = (mongoUri) => {
 };
 
 const connectDatabase = async () => {
+  if (mongoose.connection.readyState === 1) {
+    return mongoose.connection;
+  }
+
+  if (connectionPromise) {
+    return connectionPromise;
+  }
+
   const { uri, changed } = sanitizeMongoUri(process.env.MONGO_URI || DEFAULT_MONGO_URI);
 
   if (changed) {
     console.warn('Removed unsupported MongoDB URI query parameters before connecting.');
   }
 
-  await mongoose.connect(uri);
-  console.log('MongoDB connected');
+  connectionPromise = mongoose
+    .connect(uri)
+    .then((connection) => {
+      console.log('MongoDB connected');
+      return connection;
+    })
+    .catch((error) => {
+      connectionPromise = null;
+      throw error;
+    });
+
+  return connectionPromise;
 };
 
 module.exports = connectDatabase;

@@ -11,13 +11,8 @@ const productsRoutes = require('./products.routes');
 const usersRoutes = require('./users.routes');
 const venuesRoutes = require('./venues.routes');
 
-const apiRoutes = (io) => {
+const apiRoutes = () => {
   const router = express.Router();
-
-  router.use((req, res, next) => {
-    req.io = io;
-    next();
-  });
 
   router.use('/auth', authRoutes);
   router.use('/bookings', bookingsRoutes);
