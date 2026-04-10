@@ -11,6 +11,7 @@ const User = require('../models/User');
 const Venue = require('../models/Venue');
 
 const isValidObjectId = (value) => mongoose.Types.ObjectId.isValid(value);
+let ensureGameSeedDataPromise = null;
 
 const demoUsers = [
   {
@@ -200,10 +201,18 @@ const ensureDemoUsers = async () => {
   for (const input of demoUsers) {
     let user = await User.findOne({ email: input.email });
     if (!user) {
-      user = await User.create({
-        ...input,
-        passwordHash,
-      });
+      try {
+        user = await User.create({
+          ...input,
+          passwordHash,
+        });
+      } catch (error) {
+        if (error?.code === 11000) {
+          user = await User.findOne({ email: input.email });
+        } else {
+          throw error;
+        }
+      }
     }
     users.push(user);
   }
@@ -217,10 +226,18 @@ const ensureDemoVenues = async (ownerId) => {
   for (const input of demoVenues) {
     let venue = await Venue.findOne({ name: input.name });
     if (!venue) {
-      venue = await Venue.create({
-        ...input,
-        owner: ownerId,
-      });
+      try {
+        venue = await Venue.create({
+          ...input,
+          owner: ownerId,
+        });
+      } catch (error) {
+        if (error?.code === 11000) {
+          venue = await Venue.findOne({ name: input.name });
+        } else {
+          throw error;
+        }
+      }
     }
     venues.push(venue);
   }
@@ -282,166 +299,174 @@ const formatCommentTree = (comments, followingIds = new Set()) => {
 };
 
 const ensureGameSeedData = async () => {
-  const users = await ensureDemoUsers();
-  const organizer = users.find((user) => user.email === 'owner@arenax.demo');
-  const venues = await ensureDemoVenues(organizer._id);
-  const player = users.find((user) => user.email === 'player@arenax.demo');
-  const rohan = users.find((user) => user.email === 'rohan@arenax.demo');
-  const ananya = users.find((user) => user.email === 'ananya@arenax.demo');
-  const kabir = users.find((user) => user.email === 'kabir@arenax.demo');
+  if (!ensureGameSeedDataPromise) {
+    ensureGameSeedDataPromise = (async () => {
+      const users = await ensureDemoUsers();
+      const organizer = users.find((user) => user.email === 'owner@arenax.demo');
+      const venues = await ensureDemoVenues(organizer._id);
+      const player = users.find((user) => user.email === 'player@arenax.demo');
+      const rohan = users.find((user) => user.email === 'rohan@arenax.demo');
+      const ananya = users.find((user) => user.email === 'ananya@arenax.demo');
+      const kabir = users.find((user) => user.email === 'kabir@arenax.demo');
 
-  let club = await Club.findOne({ name: 'ArenaX Early Kickers' });
-  if (!club) {
-    club = await Club.create({
-      name: 'ArenaX Early Kickers',
-      description: 'Morning football runners and weekday turf regulars.',
-      sport: 'Football',
-      avatarUrl:
-        'https://images.unsplash.com/photo-1517466787929-bc90951d0974?auto=format&fit=crop&w=400&q=80',
-      ownerId: organizer._id,
-      members: [organizer._id, player._id, rohan._id],
-    });
-  }
+      let club = await Club.findOne({ name: 'ArenaX Early Kickers' });
+      if (!club) {
+        club = await Club.create({
+          name: 'ArenaX Early Kickers',
+          description: 'Morning football runners and weekday turf regulars.',
+          sport: 'Football',
+          avatarUrl:
+            'https://images.unsplash.com/photo-1517466787929-bc90951d0974?auto=format&fit=crop&w=400&q=80',
+          ownerId: organizer._id,
+          members: [organizer._id, player._id, rohan._id],
+        });
+      }
 
-  await User.updateMany(
-    { _id: { $in: [organizer._id, player._id, rohan._id] } },
-    { $addToSet: { clubs: club._id } },
-  );
-
-  const seededGames = [
-    {
-      title: 'Football Sunrise Scrimmage',
-      sport: 'Football',
-      format: '7v7',
-      venueId: venues[0]._id,
-      hostId: rohan._id,
-      date: shiftDays(1, 6, 30),
-      startTime: formatDisplayTime(6, 30),
-      endTime: formatDisplayTime(7, 30),
-      maxPlayers: 14,
-      currentPlayers: 3,
-      pricePerPlayer: 147,
-      visibility: 'public',
-      imageUrl: venues[0].images[0],
-      distanceKm: venues[0].distanceKm,
-      notes: 'Fast-paced half pitch session. Shin guards preferred.',
-    },
-    {
-      title: 'Bandra Smash Doubles',
-      sport: 'Badminton',
-      format: '2v2',
-      venueId: venues[1]._id,
-      hostId: ananya._id,
-      date: shiftDays(1, 21, 0),
-      startTime: formatDisplayTime(21, 0),
-      endTime: formatDisplayTime(22, 0),
-      maxPlayers: 4,
-      currentPlayers: 1,
-      pricePerPlayer: 300,
-      visibility: 'friends',
-      imageUrl: venues[1].images[0],
-      distanceKm: venues[1].distanceKm,
-      notes: 'Friends-only doubles rotation. Feather shuttles included.',
-    },
-    {
-      title: 'Cricket Box Night Nets',
-      sport: 'Cricket',
-      format: '6v6',
-      venueId: venues[2]._id,
-      hostId: kabir._id,
-      date: shiftDays(2, 20, 0),
-      startTime: formatDisplayTime(20, 0),
-      endTime: formatDisplayTime(21, 30),
-      maxPlayers: 12,
-      currentPlayers: 2,
-      pricePerPlayer: 200,
-      visibility: 'club',
-      imageUrl: venues[2].images[0],
-      distanceKm: venues[2].distanceKm,
-      inviteMeta: {
-        allowInvites: true,
-        friendsOnly: false,
-        clubId: club._id,
-        inviteCode: 'BOXNIGHT',
-      },
-      notes: 'Club members priority. Mixed batting and bowling nets.',
-    },
-  ];
-
-  for (const input of seededGames) {
-    let game = await Game.findOne({ title: input.title });
-    if (!game) {
-      game = await Game.create(input);
-    }
-
-    const joiners = [];
-    if (input.title === 'Football Sunrise Scrimmage') {
-      joiners.push(player, rohan, organizer);
-    }
-    if (input.title === 'Bandra Smash Doubles') {
-      joiners.push(ananya);
-    }
-    if (input.title === 'Cricket Box Night Nets') {
-      joiners.push(kabir, organizer);
-    }
-
-    for (const joiner of joiners) {
-      await GamePlayer.updateOne(
-        { gameId: game._id, userId: joiner._id },
-        {
-          $setOnInsert: {
-            gameId: game._id,
-            userId: joiner._id,
-            amountPaid: game.pricePerPlayer,
-            paymentStatus: 'paid',
-            paymentReference: `seed-${game._id}-${joiner._id}`,
-            skillLevel: joiner.skillLevel,
-            playingPosition: joiner.playingPosition,
-            isHost: String(joiner._id) === String(game.hostId),
-          },
-        },
-        { upsert: true },
+      await User.updateMany(
+        { _id: { $in: [organizer._id, player._id, rohan._id] } },
+        { $addToSet: { clubs: club._id } },
       );
-    }
-  }
 
-  const existingInvite = await Message.findOne({ type: 'invite' });
-  if (!existingInvite) {
-    const footballGame = await Game.findOne({ title: 'Football Sunrise Scrimmage' });
-    await Message.create({
-      senderId: rohan._id,
-      recipientId: player._id,
-      gameId: footballGame._id,
-      type: 'invite',
-      text: 'Need one more midfielder for tomorrow. Join if you are in.',
-      inviteMeta: {
-        gameId: footballGame._id,
-        status: 'pending',
-      },
+      const seededGames = [
+        {
+          title: 'Football Sunrise Scrimmage',
+          sport: 'Football',
+          format: '7v7',
+          venueId: venues[0]._id,
+          hostId: rohan._id,
+          date: shiftDays(1, 6, 30),
+          startTime: formatDisplayTime(6, 30),
+          endTime: formatDisplayTime(7, 30),
+          maxPlayers: 14,
+          currentPlayers: 3,
+          pricePerPlayer: 147,
+          visibility: 'public',
+          imageUrl: venues[0].images[0],
+          distanceKm: venues[0].distanceKm,
+          notes: 'Fast-paced half pitch session. Shin guards preferred.',
+        },
+        {
+          title: 'Bandra Smash Doubles',
+          sport: 'Badminton',
+          format: '2v2',
+          venueId: venues[1]._id,
+          hostId: ananya._id,
+          date: shiftDays(1, 21, 0),
+          startTime: formatDisplayTime(21, 0),
+          endTime: formatDisplayTime(22, 0),
+          maxPlayers: 4,
+          currentPlayers: 1,
+          pricePerPlayer: 300,
+          visibility: 'friends',
+          imageUrl: venues[1].images[0],
+          distanceKm: venues[1].distanceKm,
+          notes: 'Friends-only doubles rotation. Feather shuttles included.',
+        },
+        {
+          title: 'Cricket Box Night Nets',
+          sport: 'Cricket',
+          format: '6v6',
+          venueId: venues[2]._id,
+          hostId: kabir._id,
+          date: shiftDays(2, 20, 0),
+          startTime: formatDisplayTime(20, 0),
+          endTime: formatDisplayTime(21, 30),
+          maxPlayers: 12,
+          currentPlayers: 2,
+          pricePerPlayer: 200,
+          visibility: 'club',
+          imageUrl: venues[2].images[0],
+          distanceKm: venues[2].distanceKm,
+          inviteMeta: {
+            allowInvites: true,
+            friendsOnly: false,
+            clubId: club._id,
+            inviteCode: 'BOXNIGHT',
+          },
+          notes: 'Club members priority. Mixed batting and bowling nets.',
+        },
+      ];
+
+      for (const input of seededGames) {
+        let game = await Game.findOne({ title: input.title });
+        if (!game) {
+          game = await Game.create(input);
+        }
+
+        const joiners = [];
+        if (input.title === 'Football Sunrise Scrimmage') {
+          joiners.push(player, rohan, organizer);
+        }
+        if (input.title === 'Bandra Smash Doubles') {
+          joiners.push(ananya);
+        }
+        if (input.title === 'Cricket Box Night Nets') {
+          joiners.push(kabir, organizer);
+        }
+
+        for (const joiner of joiners) {
+          await GamePlayer.updateOne(
+            { gameId: game._id, userId: joiner._id },
+            {
+              $setOnInsert: {
+                gameId: game._id,
+                userId: joiner._id,
+                amountPaid: game.pricePerPlayer,
+                paymentStatus: 'paid',
+                paymentReference: `seed-${game._id}-${joiner._id}`,
+                skillLevel: joiner.skillLevel,
+                playingPosition: joiner.playingPosition,
+                isHost: String(joiner._id) === String(game.hostId),
+              },
+            },
+            { upsert: true },
+          );
+        }
+      }
+
+      const existingInvite = await Message.findOne({ type: 'invite' });
+      if (!existingInvite) {
+        const footballGame = await Game.findOne({ title: 'Football Sunrise Scrimmage' });
+        await Message.create({
+          senderId: rohan._id,
+          recipientId: player._id,
+          gameId: footballGame._id,
+          type: 'invite',
+          text: 'Need one more midfielder for tomorrow. Join if you are in.',
+          inviteMeta: {
+            gameId: footballGame._id,
+            status: 'pending',
+          },
+        });
+      }
+
+      const commentCount = await GameComment.countDocuments();
+      if (commentCount === 0) {
+        const footballGame = await Game.findOne({ title: 'Football Sunrise Scrimmage' });
+        const topComment = await GameComment.create({
+          gameId: footballGame._id,
+          authorId: rohan._id,
+          text: 'Bring dark jerseys. We are splitting into two balanced sides.',
+        });
+
+        await GameComment.create({
+          gameId: footballGame._id,
+          authorId: player._id,
+          parentCommentId: topComment._id,
+          text: 'I will be there 10 minutes early.',
+        });
+      }
+
+      return {
+        demoUser: player,
+        demoToken: signDemoToken(player),
+      };
+    })().finally(() => {
+      ensureGameSeedDataPromise = null;
     });
   }
 
-  const commentCount = await GameComment.countDocuments();
-  if (commentCount === 0) {
-    const footballGame = await Game.findOne({ title: 'Football Sunrise Scrimmage' });
-    const topComment = await GameComment.create({
-      gameId: footballGame._id,
-      authorId: rohan._id,
-      text: 'Bring dark jerseys. We are splitting into two balanced sides.',
-    });
-
-    await GameComment.create({
-      gameId: footballGame._id,
-      authorId: player._id,
-      parentCommentId: topComment._id,
-      text: 'I will be there 10 minutes early.',
-    });
-  }
-
-  return {
-    demoUser: player,
-    demoToken: signDemoToken(player),
-  };
+  return ensureGameSeedDataPromise;
 };
 
 exports.bootstrap = async (_req, res) => {

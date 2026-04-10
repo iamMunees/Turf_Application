@@ -92,7 +92,7 @@ const VenueList = () => {
             <h2 className="mt-2 text-2xl font-semibold text-white">Choose city, area, and venue</h2>
             {session ? (
               <p className="mt-2 text-sm text-slate-300">
-                Demo session active for {session.user.fullName} in {session.user.city}
+                Signed in as {session.user.fullName} in {session.user.city}
               </p>
             ) : null}
           </div>

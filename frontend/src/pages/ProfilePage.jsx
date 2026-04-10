@@ -5,11 +5,11 @@ import EditProfile from '../components/profile/EditProfile';
 import FollowButton from '../components/profile/FollowButton';
 import UserAvatar from '../components/profile/UserAvatar';
 import UserStats from '../components/profile/UserStats';
+import { useAuth } from '../context/AuthContext';
 import {
   ensureArenaXSession,
   getCurrentUserProfile,
   getUserProfile,
-  setStoredSession,
   toggleUserFollow,
   updateUserProfile,
 } from '../lib/arenaxApi';
@@ -17,6 +17,7 @@ import {
 const ProfilePage = () => {
   const { userId } = useParams();
   const navigate = useNavigate();
+  const { updateSession } = useAuth();
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -40,9 +41,9 @@ const ProfilePage = () => {
         },
       };
       setSession(nextSession);
-      setStoredSession(nextSession);
+      updateSession(nextSession);
     }
-  }, [userId]);
+  }, [updateSession, userId]);
 
   useEffect(() => {
     const load = async () => {
@@ -79,7 +80,7 @@ const ProfilePage = () => {
         },
       };
       setSession(nextSession);
-      setStoredSession(nextSession);
+      updateSession(nextSession);
       setEditing(false);
     } catch (saveError) {
       setError(saveError.message);

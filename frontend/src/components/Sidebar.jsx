@@ -26,7 +26,7 @@ const Sidebar = () => {
             className={({ isActive }) =>
               `rounded-2xl px-4 py-3 text-sm  font-medium transition ${
                 isActive
-                  ? 'border border-cyan-200/30 bg-cyan-100 text-slate-950 shadow-[0_10px_30px_rgba(125,211,252,0.18)]'
+                  ? 'border border-cyan-200/30 bg-cyan-100 text-black shadow-[0_10px_30px_rgba(125,211,252,0.18)]'
                   : 'border border-white/10 bg-slate-950/30 text-slate-300 hover:text-white'
               }`
             }

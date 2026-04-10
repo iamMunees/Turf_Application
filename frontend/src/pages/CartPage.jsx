@@ -1,9 +1,14 @@
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAddOns } from '../context/AddOnsContext';
 import { formatCurrency } from '../lib/arenaxApi';
 
 const CartPage = () => {
-  const { cart, isCartLoading, removeFromCart } = useAddOns();
+  const { cart, isCartLoading, loadCart, removeFromCart } = useAddOns();
+
+  useEffect(() => {
+    loadCart().catch(() => undefined);
+  }, [loadCart]);
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(34,211,238,0.16),_transparent_24%),linear-gradient(180deg,_#020617,_#091221_38%,_#020617)] px-4 py-6 text-white md:px-6 lg:px-8">

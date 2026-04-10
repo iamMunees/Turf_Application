@@ -2,7 +2,13 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 const SESSION_STORAGE_KEY = 'arenax-demo-session';
 let sessionPromise = null;
 
-const request = async (path, options = {}) => {
+const notifySessionChange = () => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('arenax-session-changed'));
+  }
+};
+
+const performRequest = async (path, options = {}) => {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
     headers: {
@@ -13,11 +19,7 @@ const request = async (path, options = {}) => {
 
   const payload = await response.json().catch(() => ({}));
 
-  if (!response.ok || payload.success === false) {
-    throw new Error(payload.message || 'Request failed.');
-  }
-
-  return payload;
+  return { response, payload };
 };
 
 const authHeaders = (token, headers = {}) => ({
@@ -42,27 +44,29 @@ export const getStoredSession = () => {
 
 export const setStoredSession = (session) => {
   window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+  notifySessionChange();
 };
 
 export const clearStoredSession = () => {
   window.localStorage.removeItem(SESSION_STORAGE_KEY);
+  notifySessionChange();
 };
 
-export const ensureArenaXSession = async () => {
-  const existingSession = getStoredSession();
+const normalizeSessionPayload = (payload) => ({
+  token: payload.token,
+  user: payload.user,
+  demoCredentials: payload.demoCredentials,
+});
 
-  if (existingSession?.token) {
-    return existingSession;
-  }
-
+const createArenaXSession = async () => {
   if (!sessionPromise) {
-    sessionPromise = request('/venues/bootstrap')
-      .then((payload) => {
-        const session = {
-          token: payload.token,
-          user: payload.user,
-          demoCredentials: payload.demoCredentials,
-        };
+    sessionPromise = performRequest('/venues/bootstrap')
+      .then(({ payload, response }) => {
+        if (!response.ok || payload.success === false) {
+          throw new Error(payload.message || 'Request failed.');
+        }
+
+        const session = normalizeSessionPayload(payload);
 
         setStoredSession(session);
         return session;
@@ -75,7 +79,58 @@ export const ensureArenaXSession = async () => {
   return sessionPromise;
 };
 
+export const ensureArenaXSession = async (forceRefresh = false) => {
+  if (forceRefresh) {
+    clearStoredSession();
+  }
+
+  const existingSession = getStoredSession();
+
+  if (existingSession?.token) {
+    return existingSession;
+  }
+
+  throw new Error('Please log in to continue.');
+};
+
+const request = async (path, options = {}) => {
+  const { response, payload } = await performRequest(path, options);
+
+  if (response.status === 401 && options.headers?.Authorization) {
+    clearStoredSession();
+    throw new Error('Session expired. Please log in again.');
+  }
+
+  if (!response.ok || payload.success === false) {
+    throw new Error(payload.message || 'Request failed.');
+  }
+
+  return payload;
+};
+
 export const getVenueFilters = async () => request('/venues/filters');
+
+export const loginUser = async (credentials) => {
+  const payload = await request('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify(credentials),
+  });
+  const session = normalizeSessionPayload(payload);
+  setStoredSession(session);
+  return session;
+};
+
+export const registerUser = async (details) => {
+  const payload = await request('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(details),
+  });
+  const session = normalizeSessionPayload(payload);
+  setStoredSession(session);
+  return session;
+};
+
+export const bootstrapDemoSession = async () => createArenaXSession();
 
 export const getVenues = async (filters) => {
   const query = new URLSearchParams();

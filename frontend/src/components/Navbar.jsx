@@ -1,37 +1,14 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { clearStoredSession, ensureArenaXSession, getCurrentUserProfile, setStoredSession } from '../lib/arenaxApi';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const Navbar = () => {
-  const [session, setSession] = useState(null);
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const sessionValue = await ensureArenaXSession();
-        const profile = await getCurrentUserProfile(sessionValue.token);
-        const nextSession = {
-          ...sessionValue,
-          user: {
-            ...sessionValue.user,
-            ...profile.data.user,
-          },
-        };
-        setStoredSession(nextSession);
-        setSession(nextSession);
-      } catch {
-        const sessionValue = await ensureArenaXSession().catch(() => null);
-        setSession(sessionValue);
-      }
-    };
-
-    load();
-  }, []);
-
-  const logout = () => {
-    clearStoredSession();
-    window.location.assign('/dashboard');
+  const handleLogout = () => {
+    navigate('/logout');
   };
 
   return (
@@ -76,13 +53,13 @@ const Navbar = () => {
           className="flex items-center gap-3 rounded-full border border-white/10 bg-slate-950/55 px-3 py-2 text-left"
         >
           <img
-            src={session?.user?.avatarUrl || 'https://placehold.co/64x64/0f172a/e2e8f0?text=A'}
-            alt={session?.user?.fullName || 'ArenaX user'}
+            src={user?.avatarUrl || 'https://placehold.co/64x64/0f172a/e2e8f0?text=A'}
+            alt={user?.fullName || 'ArenaX user'}
             className="h-10 w-10 rounded-full object-cover"
           />
           <div className="hidden sm:block">
-            <p className="text-sm font-semibold text-white">{session?.user?.fullName || 'ArenaX User'}</p>
-            <p className="text-xs text-slate-400">@{session?.user?.username || 'player'}</p>
+            <p className="text-sm font-semibold text-white">{user?.fullName || 'ArenaX User'}</p>
+            <p className="text-xs text-slate-400">@{user?.username || 'player'}</p>
           </div>
         </button>
 
@@ -102,7 +79,7 @@ const Navbar = () => {
             </Link>
             <button
               type="button"
-              onClick={logout}
+              onClick={handleLogout}
               className="mt-2 block w-full rounded-xl px-4 py-3 text-left text-sm text-rose-200 hover:bg-rose-500/10"
             >
               Logout

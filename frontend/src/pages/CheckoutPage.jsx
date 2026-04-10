@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import OrderConfirmation from '../components/checkout/OrderConfirmation';
 import OrderItemsSection from '../components/checkout/OrderItemsSection';
 import CouponInput from '../components/checkout/CouponInput';
@@ -10,7 +11,11 @@ import { useAddOns } from '../context/AddOnsContext';
 const steps = ['Cart', 'Review', 'Payment', 'Confirmation'];
 
 const CheckoutPage = () => {
-  const { checkoutStep } = useAddOns();
+  const { checkoutStep, loadCart } = useAddOns();
+
+  useEffect(() => {
+    loadCart().catch(() => undefined);
+  }, [loadCart]);
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(34,211,238,0.16),_transparent_24%),radial-gradient(circle_at_top_right,_rgba(251,191,36,0.14),_transparent_28%),linear-gradient(180deg,_#020617,_#091221_38%,_#020617)] px-4 py-6 text-white md:px-6 lg:px-8">

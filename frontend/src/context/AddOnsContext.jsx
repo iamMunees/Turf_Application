@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useState } from 'react';
 import {
   addCartItem,
   ensureArenaXSession,
@@ -85,12 +85,12 @@ export const AddOnsProvider = ({ children }) => {
     };
   };
 
-  const withSession = async () => {
+  const withSession = useCallback(async () => {
     const session = await ensureArenaXSession();
     return session.token;
-  };
+  }, []);
 
-  const loadCart = async () => {
+  const loadCart = useCallback(async () => {
     setIsCartLoading(true);
     try {
       const token = await withSession();
@@ -99,22 +99,7 @@ export const AddOnsProvider = ({ children }) => {
     } finally {
       setIsCartLoading(false);
     }
-  };
-
-  useEffect(() => {
-    const bootstrapCart = async () => {
-      setIsCartLoading(true);
-      try {
-        const token = await withSession();
-        const response = await getCart(token);
-        setCart(response.data.cart);
-      } finally {
-        setIsCartLoading(false);
-      }
-    };
-
-    bootstrapCart().catch(() => undefined);
-  }, []);
+  }, [withSession]);
 
   const openRecommendationsForBooking = async (bookingId, tokenOverride) => {
     setIsRecommendationsLoading(true);
