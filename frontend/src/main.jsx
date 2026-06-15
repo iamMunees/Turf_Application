@@ -7,19 +7,22 @@ import { AuthProvider } from './context/AuthContext.jsx'
 import { EventsProvider } from './context/EventsContext.jsx'
 import { PlayersProvider } from './context/PlayersContext.jsx'
 import { SocialFeedProvider } from './context/SocialFeedContext.jsx'
+import { TheamProvider } from './Provider/TheamProvider.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <AuthProvider>
-      <EventsProvider>
-        <PlayersProvider>
-          <SocialFeedProvider>
-            <AddOnsProvider>
-              <App />
-            </AddOnsProvider>
-          </SocialFeedProvider>
-        </PlayersProvider>
-      </EventsProvider>
-    </AuthProvider>
+    <TheamProvider>
+      <AuthProvider>
+        <EventsProvider>
+          <PlayersProvider>
+            <SocialFeedProvider>
+              <AddOnsProvider>
+                <App />
+              </AddOnsProvider>
+            </SocialFeedProvider>
+          </PlayersProvider>
+        </EventsProvider>
+      </AuthProvider>
+    </TheamProvider>
   </StrictMode>,
 )

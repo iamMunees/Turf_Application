@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import TheamToggle from './TheamToggle';
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -46,6 +47,7 @@ const Navbar = () => {
           Social Feed
         </Link>
       </nav>
+      <TheamToggle />
       <div className="relative">
         <button
           type="button"
